@@ -11,7 +11,7 @@ public class Personal {
 			almazon.Cliente();
 			
 		} catch (InterruptedException e) {
-
+			
 		}
 	}
 	private void hiloAdmin() {
@@ -19,7 +19,16 @@ public class Personal {
 			almazon.EmpleadoAdministrativo();
 			
 		} catch (InterruptedException e) {
-
+			
+		}
+	}
+	
+	private void hiloEncargado() {
+		try {
+			almazon.EmpleadoEncargado();
+			
+		} catch (InterruptedException e) {
+			
 		}
 	}
 	
@@ -29,6 +38,7 @@ public class Personal {
 			new Thread(() -> hiloCliente()).start();
 			new Thread(() -> hiloAdmin()).start();
 		}
+		new Thread(() -> hiloEncargado()).start();
 	}
 	
 	public static void main(String[] args) {

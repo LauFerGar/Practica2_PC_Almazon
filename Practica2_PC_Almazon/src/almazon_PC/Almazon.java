@@ -1,7 +1,6 @@
 package almazon_PC;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.Exchanger;
 import java.util.concurrent.Semaphore;
@@ -16,17 +15,19 @@ public class Almazon {
 	private Condition pago_realizado = lock.newCondition();
 
 	private Semaphore ver_almacen = new Semaphore(1);
+	private Semaphore reponer_almacen = new Semaphore(1);
 
 	private Exchanger<Pedido> exPedido = new Exchanger<Pedido>();
+	private Exchanger<Integer> producto_reponer = new Exchanger<Integer>();
 
 	public volatile int num_pedido = 0;
-	// public volatile int[] almacen = {20,20,20,20,20,20,20,20,20,20,20};
-	public volatile int[] almacen = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+	public volatile int[] almacen = {10,10,10,10,20,20,20,20,20,20};
+	//public volatile int[] almacen = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+	public volatile boolean reponer = false; 
+	 
 	List<Pedido> lista_pedidos = new ArrayList<Pedido>();
 
 	public void Cliente() throws InterruptedException {
-//		while (true) {
-//			System.out.println(Thread.currentThread().getId());
 			while (true) {
 				int pedido_cliente;
 				List<Integer> lista_productos_cliente = new ArrayList<Integer>();
@@ -82,11 +83,10 @@ public class Almazon {
 
 				System.out.println("El cliente " + nombre_cliente + " ha pagado el pedido " + p.num_pedido);
 		}
-//		}
+
 	}
 
 	public void EmpleadoAdministrativo() throws InterruptedException {
-//		while (true) {
 		while (true) {
 				Pedido pAdmin = exPedido.exchange(null);
 				while (pAdmin == null)
@@ -112,7 +112,20 @@ public class Almazon {
 							System.out.println("El producto " + producto + " esta agotado");
 							pAdmin.hiloCliente.interrupt();
 							Thread.currentThread().interrupt();
-						} else {
+						} 
+						else if(almacen[producto]<=5) {
+							reponer_almacen.acquire();
+							reponer=true;
+							producto_reponer.exchange(producto);
+							reponer_almacen.release();
+							
+							Thread.sleep(2000);
+							
+							ver_almacen.acquire();
+							almacen[producto]--;
+							ver_almacen.release();
+						}
+						else {
 							ver_almacen.acquire();
 							almacen[producto]--;
 							ver_almacen.release();
@@ -153,7 +166,7 @@ public class Almazon {
 
 				System.out.println("Admin - Email enviado al cliente: " + pAdmin.nombre_Cliente);
 		}
-//		}
+
 	}
 
 	public void EmpleadoRecogePedidos() throws InterruptedException {
@@ -170,5 +183,20 @@ public class Almazon {
 
 	public void EmpleadoEncargado() throws InterruptedException {
 
+		while(true) {
+		
+			while(!reponer) {
+				Thread.sleep(1000);
+				System.out.println("Encargado - Estoy haciendo cosas");
+			}
+			
+			int producto = producto_reponer.exchange(null);
+			ver_almacen.acquire();
+			almacen[producto]=20;
+			System.out.println("El producto "+ producto + " se ha repuesto y ahora hay " + almacen[producto] + " articulos");
+			ver_almacen.release();
+			
+		}
+		
 	}
 }
