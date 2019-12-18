@@ -6,12 +6,14 @@ public class Pedido {
 
 	int num_pedido;
 	List<Integer> lista_productos_cliente;
-	int nombre_Cliente;
+	long nombre_Cliente;
+	Thread hiloCliente;
 	
-	public Pedido(int num_pedido, List<Integer> lista_productos_cliente, int nombre_Cliente) {
+	public Pedido(int num_pedido, List<Integer> lista_productos_cliente, long cliente, Thread hiloCliente) {
 		this.num_pedido = num_pedido;
 		this.lista_productos_cliente = lista_productos_cliente;
-		this.nombre_Cliente = nombre_Cliente;
+		this.nombre_Cliente = cliente;
+		this.hiloCliente = hiloCliente;
 	}
 	
 
@@ -23,7 +25,7 @@ public class Pedido {
 		return lista_productos_cliente;
 	}
 
-	public int getNombre_Cliente() {
+	public long getNombre_Cliente() {
 		return nombre_Cliente;
 	}
 	

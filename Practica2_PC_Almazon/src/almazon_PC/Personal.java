@@ -5,23 +5,28 @@ public class Personal {
 	
 	static final int NUM_EMPLEADOS = 2; 
 
-	private void hiloCliente(int nombre_cliente) {
+	private void hiloCliente() {
 		try {
 			Thread.sleep(500);
-			almazon.Cliente(nombre_cliente);
-		} catch (InterruptedException e) {}
+			almazon.Cliente();
+			
+		} catch (InterruptedException e) {
+
+		}
 	}
 	private void hiloAdmin() {
 		try {
 			almazon.EmpleadoAdministrativo();
-		} catch (InterruptedException e) {}
+			
+		} catch (InterruptedException e) {
+
+		}
 	}
 	
 	public void exec() {
 		almazon = new Almazon(); 
 		for (int i = 0; i < NUM_EMPLEADOS; i++) {
-			int numCliente = i;
-			new Thread(() -> hiloCliente(numCliente)).start();
+			new Thread(() -> hiloCliente()).start();
 			new Thread(() -> hiloAdmin()).start();
 		}
 	}
