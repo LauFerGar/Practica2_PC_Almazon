@@ -49,7 +49,7 @@ public class Almazon {
 		lock.lock();
 		try {
 			lista_pedidos.add(p);
-			adminLock.signal();//despertamos al admin porque acabo de añadir pedido
+//			adminLock.signal();//despertamos al admin porque acabo de aï¿½adir pedido
 			Thread.sleep(500);
 		}catch (InterruptedException e) {}
 		finally {
@@ -59,7 +59,8 @@ public class Almazon {
 		lock.lock();
 		try {
 			//Mientras no se ha tramitado el pedido el cliente espera
-			adminLock.await();
+			while(lock.hasWaiters(adminLock))
+				adminLock.await();
 			
 		}catch (InterruptedException e) {
 			System.out.println("Se ha producido un fallo en el pedido y el Cliente tiene que pedir de nuevo");
@@ -72,12 +73,12 @@ public class Almazon {
 		
 		lock.lock();
 		try {
-			pago_realizado.await();
+			while(lock.hasWaiters(pago_realizado))
+				pago_realizado.await();
 			Thread.sleep(500);
 		}finally {
 			lock.unlock();
 		}
-		
 		System.out.println("El cliente " + nombre_cliente + " ha pagado el pedido " + p.num_pedido);
 		
 	}
@@ -100,7 +101,6 @@ public class Almazon {
 			lock.unlock();
 		}
 
-		
 		lock.lock();
 		try {
 			System.out.println("Revisando Datos...");
@@ -134,9 +134,9 @@ public class Almazon {
 			pago_realizado.signal();
 			Thread.sleep(500);
 		}finally {
-		lock.unlock();
+			lock.unlock();
 		}
-		
+
 		System.out.println("Admin - Pago realizado del cliente: " + pAdmin.nombre_Cliente);
 		
 		System.out.println("Admin - Email enviado al cliente: " + pAdmin.nombre_Cliente);
