@@ -16,18 +16,22 @@ public class Almazon_PC {
 	
 	//Semaforo para acceder al almacen
 	private Semaphore ver_almacen = new Semaphore(1);
+	//Semaforo para lista de pedidos
+	private Semaphore ver_lista_pagos = new Semaphore(1);
+	//Semaforo para ver lista de pendientes
+	private Semaphore ver_lista_pendientes = new Semaphore(1);
 	
 	//Lista de los pedidos que se han realizado
 	List<Pedido> lista_pedidos = new ArrayList<Pedido>();
 	
+	//Lista de los pedidos pendientes
+	List<Pedido> lista_pendientes = new ArrayList<Pedido>();
+	
+	//Lista de pagos
+	List<Pedido> pago_pedido = new ArrayList<Pedido>();
+	
 	//Exchanger que pasa el pedido del Cliente al Admin
 	private Exchanger<Pedido> exPedido = new Exchanger<Pedido>();
-	
-	//Exchanger que pasa indicar que se ha relizado el pedido
-	private Exchanger<Thread> exRealizado = new Exchanger<Thread>();
-	
-	//Exchanger que pasa indicar que se ha relizado el pago
-	private Exchanger<Thread> exPagado = new Exchanger<Thread>();
 	
 	
 	public void Cliente() throws InterruptedException {
@@ -55,18 +59,19 @@ public class Almazon_PC {
 			
 			Pedido p = new Pedido(nPedido, lista, nombre, Thread.currentThread());
 			
-			lista_pedidos.add(p);
-			
 			System.out.println("Soy Cliente " + Thread.currentThread().getId() + " y he mandado el pedido " + nPedido);
 			
-			exPedido.exchange(p);
+			ver_lista_pendientes.acquire();
+			lista_pendientes.add(p);
+			ver_lista_pendientes.release();
 			
-			Thread cliente = exRealizado.exchange(null);
-			while(cliente==null || cliente.getId()!=p.hiloCliente.getId()) {
-				cliente = exRealizado.exchange(null);
-			}
+			while(!lista_pedidos.contains(p));
 			
-			exPagado.exchange(p.hiloCliente);
+			Thread.sleep(2000);
+			
+			ver_lista_pagos.acquire();
+			pago_pedido.add(p);
+			ver_lista_pagos.release();
 			
 			Thread.sleep(10000);
 		}
@@ -76,12 +81,16 @@ public class Almazon_PC {
 	public void EmpleadoAdministrativo() throws InterruptedException {
 		
 		while(true) {
-			Thread pedidoMal =  new Thread();
 			
-			boolean ok = false;
-			Pedido pAdmin = exPedido.exchange(null);
-			while (pAdmin == null)
-				pAdmin = exPedido.exchange(null);
+			boolean pagado = false;
+			Pedido pAdmin = null;
+			
+			while(lista_pendientes.isEmpty());
+			
+			ver_lista_pendientes.acquire();
+			pAdmin = lista_pendientes.get(0);
+			lista_pendientes.remove(0);
+			ver_lista_pendientes.release();
 			
 			for (int producto : pAdmin.lista_productos_cliente) {
 				System.out.println("El cliente " + pAdmin.nombre_Cliente + " pide el producto " + producto);
@@ -96,26 +105,28 @@ public class Almazon_PC {
 			Thread.sleep(1000);
 			System.out.println("Datos Correctos. Numero Pedido:  " + pAdmin.getNum_pedido()
 					+ " - Nombre Cliente: " + pAdmin.getNombre_Cliente());
-			ok = true;
+
 			System.out.println("Lista de Productos: ");
 			for (int producto : pAdmin.lista_productos_cliente) {
 				System.out.println("Producto verificado: " + producto);
 			}
 			
 			//Si el pedido ha salido bien devolvemos el hilo del cliente. Si no devolvemos un hilo aleatorio
-			if(ok) {
-				Thread.sleep(2000);
-				exRealizado.exchange(pAdmin.hiloCliente);
-			}
-			else {
-				exRealizado.exchange(pedidoMal);
+			Thread.sleep(2000);
+			lista_pedidos.add(pAdmin);
+			
+			Pedido pago;
+			while(!pagado && pago_pedido.size()>0) {
+				pago = pago_pedido.get(0);
+				if(pago.num_pedido==pAdmin.num_pedido)
+					pagado=true;
 			}
 			
-			Thread pagoCliente = exPagado.exchange(null);
-			while(pagoCliente == null || pagoCliente!=pAdmin.hiloCliente)
-				pagoCliente = exPagado.exchange(null);
+			ver_lista_pagos.acquire();
+			pago_pedido.remove(pAdmin);
+			ver_lista_pagos.release();
 			
-			System.out.println("El cliente " + pagoCliente.getId() + " ha pagado el pedido " + pAdmin.num_pedido + ". Procedemos a mandar Email");
+			System.out.println("El cliente " + pAdmin.hiloCliente.getId() + " ha pagado el pedido " + pAdmin.num_pedido + ". Procedemos a mandar Email");
 			
 		}
 		
