@@ -9,22 +9,34 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class Almazon {
 
+	//Cerrojo para Cliente y Admin
 	private ReentrantLock lock = new ReentrantLock();
-	private ReentrantLock inc_pedido = new ReentrantLock();
+	
+	private ReentrantLock inc = new ReentrantLock();
+
+	//Condicion de cerrojo de Administrador para despertar al cliente para que pague
 	private Condition adminLock = lock.newCondition();
+	//Condicion de cerrojo de Cliente para avisar que ha mandado el pago
 	private Condition pago_realizado = lock.newCondition();
 
+	//Semaforo que controla el acceso al almacen de productos
 	private Semaphore ver_almacen = new Semaphore(1);
+	//Semaforo que controla la variable booleana que dice si hay que reponer o no
 	private Semaphore reponer_almacen = new Semaphore(1);
 
+	//Exchanger que pasa el pedido del Cliente al Admin
 	private Exchanger<Pedido> exPedido = new Exchanger<Pedido>();
+	//Exchanger que pasa el productoq ue hay que reponer
 	private Exchanger<Integer> producto_reponer = new Exchanger<Integer>();
 
+	//Numero de pedido
 	public volatile int num_pedido = 0;
+	//Almacen
 	public volatile int[] almacen = {10,10,10,10,20,20,20,20,20,20};
-	//public volatile int[] almacen = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+	//Booleano que dice si hay que reponer algo o no
 	public volatile boolean reponer = false; 
-	 
+	
+	//Lista de pedidos que ve Admin
 	List<Pedido> lista_pedidos = new ArrayList<Pedido>();
 
 	public void Cliente() throws InterruptedException {
@@ -33,7 +45,9 @@ public class Almazon {
 				List<Integer> lista_productos_cliente = new ArrayList<Integer>();
 				long nombre_cliente = Thread.currentThread().getId();
 
-				inc_pedido.lock();
+				Thread.sleep(2000);
+				
+				inc.lock();
 				try {
 					pedido_cliente = num_pedido + 1;
 
@@ -47,41 +61,45 @@ public class Almazon {
 					System.out.println("El cliente " + nombre_cliente + " realiza pedido");
 					num_pedido++;
 				} finally {
-					inc_pedido.unlock();
+					inc.unlock();
 				}
 				Pedido p = new Pedido(pedido_cliente, lista_productos_cliente, nombre_cliente, Thread.currentThread());
 				lista_pedidos.add(p);
+				
 				exPedido.exchange(p);
-
+				
+				Thread.sleep(2000);
+				
 				lock.lock();
 				try {
+					
 					// Mientras no se ha tramitado el pedido el cliente espera
 					while (lock.hasWaiters(adminLock))
 						adminLock.await();
+					System.out.println(
+							"El cliente " + nombre_cliente + " esta esperando para pagar el pedido " + p.num_pedido);
 
 				} catch (InterruptedException e) {
 					System.out.println("Se ha producido un fallo en el pedido y el Cliente tiene que pedir de nuevo");
-					break;
 				} finally {
 					lock.unlock();
 				}
-
-				System.out.println(
-						"El cliente " + nombre_cliente + " esta esperando para pagar el pedido " + p.num_pedido);
+				
+				Thread.sleep(2000);
 
 				lock.lock();
 				try {
 					while (lock.hasWaiters(pago_realizado))
 						pago_realizado.await();
-					Thread.sleep(500);
+					
 				} catch (InterruptedException e) {
 					System.out.println("Se ha producido un fallo en el pedido y el Cliente tiene que pedir de nuevo");
 				} finally {
 					lock.unlock();
-					Thread.sleep(5000);
+					Thread.sleep(2000);
+					System.out.println("El cliente " + nombre_cliente + " ha pagado el pedido " + p.num_pedido);
 				}
-
-				System.out.println("El cliente " + nombre_cliente + " ha pagado el pedido " + p.num_pedido);
+				
 		}
 
 	}
@@ -94,18 +112,14 @@ public class Almazon {
 
 				System.out.println("Admin recibe pedido del cliente: " + pAdmin.nombre_Cliente
 						+ " con numero de pedido: " + pAdmin.num_pedido);
+				
+				Thread.sleep(2000);
 
 				lock.lock();
 				try {
 					for (int producto : pAdmin.lista_productos_cliente) {
 						System.out.println("El cliente " + pAdmin.nombre_Cliente + " pide el producto " + producto);
 					}
-				} finally {
-					lock.unlock();
-				}
-
-				lock.lock();
-				try {
 					System.out.println("Revisando Datos...");
 					for (int producto : pAdmin.lista_productos_cliente) {
 						if (almacen[producto] <= 0) {
@@ -142,29 +156,28 @@ public class Almazon {
 					}
 
 					adminLock.signal();// Despertamos al cliente
-
 				} catch (InterruptedException e) {
 					System.out.println(
 							"Se cancela pedido del Cliente " + pAdmin.getNombre_Cliente() + " por falta de productos");
-					break;
-				} finally {
+				}finally {
 					lock.unlock();
 				}
-
-				System.out.println("Esperando pago del pedido " + pAdmin.num_pedido);
+				
+				Thread.sleep(2000);
 
 				lock.lock();
 				try {
+					System.out.println("Esperando pago del pedido " + pAdmin.num_pedido);
 					pago_realizado.signal();
-					Thread.sleep(500);
+					Thread.sleep(1000);
+					System.out.println("Admin - Pago realizado del cliente: " + pAdmin.nombre_Cliente);
+
+					System.out.println("Admin - Email enviado al cliente: " + pAdmin.nombre_Cliente);
 				} catch (InterruptedException e) {
 				} finally {
 					lock.unlock();
+					
 				}
-
-				System.out.println("Admin - Pago realizado del cliente: " + pAdmin.nombre_Cliente);
-
-				System.out.println("Admin - Email enviado al cliente: " + pAdmin.nombre_Cliente);
 		}
 
 	}
@@ -186,7 +199,7 @@ public class Almazon {
 		while(true) {
 		
 			while(!reponer) {
-				Thread.sleep(1000);
+				Thread.sleep(5000);
 				System.out.println("Encargado - Estoy haciendo cosas");
 			}
 			

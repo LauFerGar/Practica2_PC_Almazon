@@ -1,9 +1,11 @@
 package almazon_PC;
 
 public class Personal {
-	Almazon almazon; 
+	Almazon_PC almazon; 
 	
-	static final int NUM_EMPLEADOS = 2; 
+	static final int NUM_CLIENTES = 4; 
+	static final int NUM_ADMIN = 2; 
+	static final int NUM_ENCARGADO = 1;
 
 	private void hiloCliente() {
 		try {
@@ -23,22 +25,27 @@ public class Personal {
 		}
 	}
 	
-	private void hiloEncargado() {
+	/*private void hiloEncargado() {
 		try {
 			almazon.EmpleadoEncargado();
 			
 		} catch (InterruptedException e) {
 			
 		}
-	}
+	}*/
 	
 	public void exec() {
-		almazon = new Almazon(); 
-		for (int i = 0; i < NUM_EMPLEADOS; i++) {
+		almazon = new Almazon_PC(); 
+		for (int i = 0; i < NUM_CLIENTES; i++) {
 			new Thread(() -> hiloCliente()).start();
+		}
+		for (int i = 0; i < NUM_ADMIN; i++) {
 			new Thread(() -> hiloAdmin()).start();
 		}
-		new Thread(() -> hiloEncargado()).start();
+		/*for (int i = 0; i < NUM_ENCARGADO; i++) {
+			new Thread(() -> hiloEncargado()).start();
+		}*/
+		
 	}
 	
 	public static void main(String[] args) {
