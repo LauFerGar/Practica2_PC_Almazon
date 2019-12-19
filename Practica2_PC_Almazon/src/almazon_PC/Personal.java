@@ -3,7 +3,7 @@ package almazon_PC;
 public class Personal {
 	Almazon almazon; 
 	
-	static final int NUM_CLIENTES = 6; 
+	static final int NUM_EMPLEADOS = 2; 
 
 	private void hiloCliente() {
 		try {
@@ -34,13 +34,10 @@ public class Personal {
 	
 	public void exec() {
 		almazon = new Almazon(); 
-		for (int i = 0; i < NUM_CLIENTES; i++) {
+		for (int i = 0; i < NUM_EMPLEADOS; i++) {
 			new Thread(() -> hiloCliente()).start();
+			new Thread(() -> hiloAdmin()).start();
 		}
-		
-		new Thread(() -> hiloAdmin()).start();
-		new Thread(() -> hiloAdmin()).start();
-		
 		new Thread(() -> hiloEncargado()).start();
 	}
 	

@@ -28,11 +28,6 @@ public class Pedido {
 	public long getNombre_Cliente() {
 		return nombre_Cliente;
 	}
-
-
-	public Pedido() {
-
-	}
 	
 	
 	
