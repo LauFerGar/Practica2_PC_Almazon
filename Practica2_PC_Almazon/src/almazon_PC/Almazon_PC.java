@@ -17,6 +17,11 @@ public class Almazon_PC {
 	//Semaforo para acceder al almacen
 	private Semaphore ver_almacen = new Semaphore(1);
 	
+	//Semaforo para while
+	private Semaphore exC = new Semaphore(1);
+	//Semaforo para while
+	private Semaphore exA = new Semaphore(1);
+		
 	//Lista de los pedidos que se han realizado
 	List<Pedido> lista_pedidos = new ArrayList<Pedido>();
 	
@@ -47,25 +52,34 @@ public class Almazon_PC {
 			//Creamos un numero aleatorio del numero de productos que quiere el cliente
 			int num_productos = (int) (Math.random() * MAX_PRODUCT_CLIENT + 1);
 
-			//Generemos los productos que quiere el cliente y los añadimos a la lista del producto.
+			//Generemos los productos que quiere el cliente y los aï¿½adimos a la lista del producto.
 			for (int i = 0; i < num_productos; i++) {
 				int producto = (int) (Math.random() * almacen.length);
 				lista.add(producto);
 			}
 			
-			Pedido p = new Pedido(nPedido, lista, nombre, Thread.currentThread());
-			
-			lista_pedidos.add(p);
+			ver_almacen.acquire();
+				Pedido p = new Pedido(nPedido, lista, nombre, Thread.currentThread());
+				
+				lista_pedidos.add(p);
+			ver_almacen.release();
 			
 			System.out.println("Soy Cliente " + Thread.currentThread().getId() + " y he mandado el pedido " + nPedido);
 			
+			exC.acquire();
 			exPedido.exchange(p);
+//			System.out.println("cliente recoge exPedido: "+p.num_pedido);
+			exC.release();
 			
+			exC.acquire();
 			Thread cliente = exRealizado.exchange(null);
-			while(cliente==null || cliente.getId()!=p.hiloCliente.getId()) {
+			while(cliente==null) {
 				cliente = exRealizado.exchange(null);
 			}
+//			System.out.println("cliente recoge exRealizado: "+cliente.getId());
+			exC.release();
 			
+//			System.out.println("pedido exPagado: "+p.hiloCliente.getId());
 			exPagado.exchange(p.hiloCliente);
 			
 			Thread.sleep(10000);
@@ -74,14 +88,17 @@ public class Almazon_PC {
 	}
 	
 	public void EmpleadoAdministrativo() throws InterruptedException {
+		//if lista pedido_urgente y lista pedidos_para enviar estan vacias 
+		// si no/ pregunta cual esta llena y la gestiona if/else
 		
 		while(true) {
-			Thread pedidoMal =  new Thread();
-			
-			boolean ok = false;
+			exA.acquire();
 			Pedido pAdmin = exPedido.exchange(null);
 			while (pAdmin == null)
 				pAdmin = exPedido.exchange(null);
+//			System.out.println("Admin recoge exPedido pedido: "+pAdmin.num_pedido);
+//			System.out.println("Admin recoge exPedido cliente: "+pAdmin.nombre_Cliente);
+			exA.release();
 			
 			for (int producto : pAdmin.lista_productos_cliente) {
 				System.out.println("El cliente " + pAdmin.nombre_Cliente + " pide el producto " + producto);
@@ -96,27 +113,28 @@ public class Almazon_PC {
 			Thread.sleep(1000);
 			System.out.println("Datos Correctos. Numero Pedido:  " + pAdmin.getNum_pedido()
 					+ " - Nombre Cliente: " + pAdmin.getNombre_Cliente());
-			ok = true;
+
 			System.out.println("Lista de Productos: ");
 			for (int producto : pAdmin.lista_productos_cliente) {
-				System.out.println("Producto verificado: " + producto);
+				System.out.println("Cliente "+pAdmin.nombre_Cliente +"- producto verificado: " + producto);
 			}
 			
 			//Si el pedido ha salido bien devolvemos el hilo del cliente. Si no devolvemos un hilo aleatorio
-			if(ok) {
-				Thread.sleep(2000);
-				exRealizado.exchange(pAdmin.hiloCliente);
-			}
-			else {
-				exRealizado.exchange(pedidoMal);
-			}
+			Thread.sleep(2000);
 			
+//			System.out.println("pedido mandado por exRealizado: "+pAdmin.hiloCliente.getId());
+			exRealizado.exchange(pAdmin.hiloCliente);
+			
+			exA.acquire();
 			Thread pagoCliente = exPagado.exchange(null);
-			while(pagoCliente == null || pagoCliente!=pAdmin.hiloCliente)
+			while(pagoCliente == null)
 				pagoCliente = exPagado.exchange(null);
 			
+//			System.out.println("exPagado hilo: "+pagoCliente.getId());
+//			System.out.println("cliente pAdmin: "+pAdmin.hiloCliente.getId());
+				
 			System.out.println("El cliente " + pagoCliente.getId() + " ha pagado el pedido " + pAdmin.num_pedido + ". Procedemos a mandar Email");
-			
+			exA.release();
 		}
 		
 	}
