@@ -6,6 +6,7 @@ public class Personal {
 	static final int NUM_CLIENTES = 4; 
 	static final int NUM_ADMIN = 2; 
 	static final int NUM_ENCARGADO = 1;
+	static final int NUM_RECOGE_PEDIDOS = 1;
 
 	private void hiloCliente() {
 		try {
@@ -19,6 +20,15 @@ public class Personal {
 	private void hiloAdmin() {
 		try {
 			almazon.EmpleadoAdministrativo();
+			
+		} catch (InterruptedException e) {
+			
+		}
+	}
+	
+	private void hiloRecogePedidos() {
+		try {
+			almazon.EmpleadoRecogePedidos();
 			
 		} catch (InterruptedException e) {
 			
@@ -41,6 +51,10 @@ public class Personal {
 		}
 		for (int i = 0; i < NUM_ADMIN; i++) {
 			new Thread(() -> hiloAdmin()).start();
+		}
+		
+		for (int i = 0; i < NUM_RECOGE_PEDIDOS; i++) {
+			new Thread(() -> hiloRecogePedidos()).start();
 		}
 		/*for (int i = 0; i < NUM_ENCARGADO; i++) {
 			new Thread(() -> hiloEncargado()).start();
