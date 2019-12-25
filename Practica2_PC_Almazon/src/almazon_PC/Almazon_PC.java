@@ -8,16 +8,21 @@ import java.util.concurrent.Exchanger;
 import java.util.concurrent.Semaphore;
 
 public class Almazon_PC {
-
+	
+	// Constante del numero de productos que puede llegar a pedir un cliente como
+	// maximo
+	static final int MAX_PRODUCT_CLIENT = 3;
+	// Constantes del tamaï¿½o de las playas
+	static final int MAX_PRODUCT_PLAYA = 20;
+	static final double JORNADA = 8.0;
+	static final double ACABAJORNADA = 16.;
+	static final double FINALIZA = 24.0;
+	
 	// Variable del numero de pedidos
 	public volatile int num_pedido = 0;
 	// Almacen
 	public volatile int[] almacen = { 10, 10, 10, 10, 20, 20, 20, 20, 20, 20 };
-	// Constante del numero de productos que puede llegar a pedir un cliente como
-	// maximo
-	static final int MAX_PRODUCT_CLIENT = 3;
-	// Constantes del tamaño de las playas
-	static final int MAX_PRODUCT_PLAYA = 20;
+	
 
 	// Mapa de la playa 1
 	private Map<Integer, Integer> playa_1 = new HashMap<>();
@@ -33,6 +38,9 @@ public class Almazon_PC {
 	private Semaphore exC = new Semaphore(1);
 	// Semaforo para while
 	private Semaphore exA = new Semaphore(1);
+	// Semaforo para lista Hilos
+	private Semaphore exHilos = new Semaphore(1);
+
 
 	// Semaforos para playas
 	private Semaphore sem_playa_1 = new Semaphore(1);
@@ -107,7 +115,7 @@ public class Almazon_PC {
 
 	}
 
-	public void EmpleadoAdministrativo() throws InterruptedException {
+	public void EmpleadoAdministrativo(int numAdmin) throws InterruptedException {
 		// if lista pedido_urgente y lista pedidos_para enviar estan vacias
 		// si no/ pregunta cual esta llena y la gestiona if/else
 
@@ -121,22 +129,22 @@ public class Almazon_PC {
 			exA.release();
 
 			for (int producto : pAdmin.lista_productos_cliente) {
-				System.out.println("El cliente " + pAdmin.nombre_Cliente + " pide el producto " + producto);
+				System.out.println("\t\tEl cliente " + pAdmin.nombre_Cliente + " pide el producto " + producto);
 			}
-			System.out.println("Revisando Datos...");
+			System.out.println("\t\tRevisando Datos...");
 			for (int producto : pAdmin.lista_productos_cliente) {
 				sem_ver_almacen.acquire();
 				almacen[producto]--;
 				sem_ver_almacen.release();
-				System.out.println("Quedan " + almacen[producto] + " articulos del producto " + producto);
+				System.out.println("\t\tQuedan " + almacen[producto] + " articulos del producto " + producto);
 			}
 			Thread.sleep(1000);
-			System.out.println("Datos Correctos. Numero Pedido:  " + pAdmin.getNum_pedido() + " - Nombre Cliente: "
+			System.out.println("\t\tDatos Correctos. Numero Pedido:  " + pAdmin.getNum_pedido() + " - Nombre Cliente: "
 					+ pAdmin.getNombre_Cliente());
 
-			System.out.println("Lista de Productos: ");
+			System.out.println("\t\tLista de Productos: ");
 			for (int producto : pAdmin.lista_productos_cliente) {
-				System.out.println("Cliente " + pAdmin.nombre_Cliente + "- producto verificado: " + producto);
+				System.out.println("\t\tCliente " + pAdmin.nombre_Cliente + "- producto verificado: " + producto);
 			}
 
 			// Si el pedido ha salido bien devolvemos el hilo del cliente. Si no devolvemos
@@ -154,7 +162,7 @@ public class Almazon_PC {
 //			System.out.println("exPagado hilo: "+pagoCliente.getId());
 //			System.out.println("cliente pAdmin: "+pAdmin.hiloCliente.getId());
 
-			System.out.println("El cliente " + pagoCliente.getId() + " ha pagado el pedido " + pAdmin.num_pedido
+			System.out.println("\t\tEl cliente " + pagoCliente.getId() + " ha pagado el pedido " + pAdmin.num_pedido
 					+ ". Procedemos a mandar Email");
 			exA.release();
 
@@ -166,7 +174,7 @@ public class Almazon_PC {
 
 	}
 
-	public void EmpleadoRecogePedidos() throws InterruptedException {
+	public void EmpleadoRecogePedidos(int empRecog) throws InterruptedException {
 		
 		while(true) {
 			if(!lista_pedidos_especial.isEmpty()) {
@@ -188,7 +196,7 @@ public class Almazon_PC {
 								//Si hay hueco en la primera playa
 								sem_playa_1.acquire();
 								playa_1.put(pedidoRP.num_pedido, producto);
-								System.out.println("EmpleadoRP "+ Thread.currentThread().getId() + " Se mete el producto " + producto + " del pedido " + pedidoRP.num_pedido + " en la playa 1");
+								System.out.println("\t\t\tEmpleadoRP "+ Thread.currentThread().getId() + " Se mete el producto " + producto + " del pedido " + pedidoRP.num_pedido + " en la playa 1");
 								sem_playa_1.release();
 							}
 							realizado = true;
@@ -197,7 +205,7 @@ public class Almazon_PC {
 							for (int producto : pedidoRP.lista_productos_cliente) {
 								sem_playa_2.acquire();
 								playa_2.put(pedidoRP.num_pedido, producto);
-								System.out.println("EmpleadoRP "+ Thread.currentThread().getId() + " Se mete el producto " + producto + " del pedido " + pedidoRP.num_pedido + " en la playa 2");
+								System.out.println("\t\t\tEmpleadoRP "+ Thread.currentThread().getId() + " Se mete el producto " + producto + " del pedido " + pedidoRP.num_pedido + " en la playa 2");
 								sem_playa_2.release();
 							}
 						realizado = true;
@@ -205,11 +213,145 @@ public class Almazon_PC {
 					}
 				}
 				else {
-					System.out.println("Esperando productos en playa");
+					System.out.println("\t\t\tEsperando productos en playa");
 				}
 			}
 			Thread.sleep(1500);
 		}
 		
+	}
+	
+	public void EmpleadoEncargado(int empAdmin, int empRecog) throws InterruptedException {
+
+		Thread.sleep(4000);// duermes 8 horas, para simular madrugada
+		long inicio = System.currentTimeMillis();
+		Thread t = null;
+		Thread tr = null;
+
+//		ExecutorService executor = Executors.newFixedThreadPool(empAdmin);
+
+		while (true) {
+			try {
+				long fin = System.currentTimeMillis();
+				double tiempo = (double) ((fin - inicio) / 1000);
+//			System.out.println(tiempo +" segundos");
+
+				Thread.sleep(1000);
+				if (tiempo == 0.0) {
+					exHilos.acquire();
+					System.out.println("\tABRO EL ALMACEN Y AVISO A LOS ADMINISTRADORES: ");
+					for (int i = 0; i < empAdmin; i++) {
+
+						t = new Thread(() -> {
+							try {
+								EmpleadoAdministrativo(empAdmin);
+							} catch (InterruptedException e) {
+								e.printStackTrace();
+							}
+						});
+						t.start();
+					}
+					for (int i = 0; i < empRecog; i++) {
+						tr = new Thread(() -> {
+							try {
+								EmpleadoRecogePedidos(empRecog);
+							} catch (InterruptedException e) {
+								e.printStackTrace();
+							}
+						});
+
+						tr.start();
+//	    			executor.execute(t);
+					}
+					exHilos.release();
+				}
+
+				// media jornada se termina
+				if (tiempo == JORNADA) {
+					exHilos.acquire();
+
+					System.out.println("\tSE TERMINA LA JORNADA DE MAÃ‘ANA " + tiempo + " segundos");
+
+//					hilosEncargado(t);
+//
+//					fin = System.currentTimeMillis(); // Instante final del procesamiento
+//					System.out.println("\tTiempo total de procesamiento: " + (fin - inicio) / 1000 + " Segundos");
+
+					System.out.println("\tEMPIEZA LA JORNADA DE TARDE: ");
+					try {
+						for (int i = 0; i < empAdmin; i++) {
+							hilosEncargado(t);
+							
+	//						Thread t2 = new Thread(() -> {
+	//							try {
+	//								System.out.println(Thread.currentThread().getId()); 
+	//								EmpleadoAdministrativo(empAdmin);
+	//							} catch (InterruptedException e) {
+	//								e.printStackTrace();
+	//							}
+	//						});
+	//						t2.start();
+							
+						}
+					}catch (InterruptedException e) {
+						System.out.println("\tHilo terminando de empleado Admin");
+					}
+					
+					try {
+						for (int i = 0; i < empRecog; i++) {
+							hilosEncargado(tr);
+						}
+					}catch (InterruptedException e) {
+						System.out.println("\tHilo terminando de empleado RecogePedido");
+					}
+					fin = System.currentTimeMillis(); // Instante final del procesamiento
+					System.out.println("\tTiempo total de procesamiento: " + (fin - inicio) / 1000 + " Segundos");
+
+					exHilos.release();
+				}
+
+				// fin de la jornada
+				else if (tiempo == ACABAJORNADA) {
+					exHilos.acquire();
+
+					System.out.println("\tSE TERMINA LA JORNADA " + tiempo + " segundos");
+
+					hilosEncargado(t);
+
+					fin = System.currentTimeMillis(); // Instante final del procesamiento
+					System.out.println("\tTiempo total de procesamiento: " + (fin - inicio) / 1000 + " Segundos");
+					exHilos.release();
+				}
+
+				else if (tiempo == FINALIZA) {
+					exHilos.acquire();
+					System.out.println("\tHA FINALIZADO EL DIA");
+					inicio = (long) 0.0;
+					t.wait(8000);
+					exHilos.release();
+				}
+
+			} catch (InterruptedException e2) {
+				System.out.println("EL HILO SE HA PARADO " +t.getId());
+			}
+		}
+
+	}
+
+	public void hilosEncargado(Thread t) throws InterruptedException {
+		Thread.sleep(100);
+		try {
+//			t.wait();
+			while(t.isAlive()) {
+				t.join();
+				if(t.isAlive()) {
+					t.interrupt();
+					t.join();
+				}
+			}
+		}catch (InterruptedException e) {
+			System.out.println("HILO INTERRUMPIDO");
+		}
+
 	}
 }
