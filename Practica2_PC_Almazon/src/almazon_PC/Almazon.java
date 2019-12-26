@@ -110,7 +110,9 @@ public class Almazon {
 //			System.out.println("pedido exPagado: "+p.hiloCliente.getId());
 			exPagado.exchange(p.hiloCliente);
 
-			Thread.sleep(5000);
+			int descanso = (int) (Math.random() * (12-8+1)+8);
+			
+			Thread.sleep(descanso * 1000);
 		}
 
 	}
@@ -316,7 +318,7 @@ public class Almazon {
 				}
 				horas++;
 				System.out.println("\t" + "\t" + "\t" + "\t" + "\t" + "Encargado " + Thread.currentThread().getId() + " Son las: " + horas);
-				Thread.sleep(2000);
+				Thread.sleep(500);
 			}
 		}
 	}

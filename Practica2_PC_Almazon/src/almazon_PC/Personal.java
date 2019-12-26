@@ -1,12 +1,13 @@
 package almazon_PC;
 
 public class Personal {
-	Almazon_PC almazon; 
+	Almazon almazon; 
 	
 	static final int NUM_CLIENTES = 4; 
 	static final int NUM_ADMIN = 2; 
 	static final int NUM_ENCARGADO = 1;
-	static final int NUM_RECOGE_PEDIDOS = 1;
+	static final int NUM_RECOGE_PEDIDOS = 2;
+	static final int NUM_EMPAQUETA_PEDIDOS = 2;
 
 	private void hiloCliente() {
 		try {
@@ -17,27 +18,63 @@ public class Personal {
 			
 		}
 	}
-//	private void hiloAdmin() {
-//		try {
-//			almazon.EmpleadoAdministrativo();
-//			
-//		} catch (InterruptedException e) {
-//			
-//		}
-//	}
+	private void hiloAdminM() {
+		try {
+			almazon.EmpleadoAdministrativo(0);
+			
+		} catch (InterruptedException e) {
+			
+		}
+	}
 	
-	private void hiloRecogePedidos() {
-//		try {
-//			almazon.EmpleadoRecogePedidos();
-//			
-//		} catch (InterruptedException e) {
-//			
-//		}
+	private void hiloRecogePedidosM() {
+		try {
+			almazon.EmpleadoRecogePedidos(0);
+			
+		} catch (InterruptedException e) {
+			
+		}
+	}
+	
+	private void hiloEmpaquetaPedidosM() {
+		try {
+			almazon.EmpleadoEmpaquetaPedidos(0);
+			
+		} catch (InterruptedException e) {
+			
+		}
+	}
+	
+	private void hiloAdminT() {
+		try {
+			almazon.EmpleadoAdministrativo(1);
+			
+		} catch (InterruptedException e) {
+			
+		}
+	}
+	
+	private void hiloRecogePedidosT() {
+		try {
+			almazon.EmpleadoRecogePedidos(1);
+			
+		} catch (InterruptedException e) {
+			
+		}
+	}
+	
+	private void hiloEmpaquetaPedidosT() {
+		try {
+			almazon.EmpleadoEmpaquetaPedidos(1);
+			
+		} catch (InterruptedException e) {
+			
+		}
 	}
 	
 	private void hiloEncargado() {
 		try {
-			almazon.EmpleadoEncargado(NUM_ADMIN, NUM_RECOGE_PEDIDOS);
+			almazon.EmpleadoEncargado();
 			
 		} catch (InterruptedException e) {
 			
@@ -45,17 +82,37 @@ public class Personal {
 	}
 	
 	public void exec() {
-		almazon = new Almazon_PC(); 
+		almazon = new Almazon(); 
 		for (int i = 0; i < NUM_CLIENTES; i++) {
 			new Thread(() -> hiloCliente()).start();
 		}
-//		for (int i = 0; i < NUM_ADMIN; i++) {
-//			new Thread(() -> hiloAdmin()).start();
-//		}
-//		
-//		for (int i = 0; i < NUM_RECOGE_PEDIDOS; i++) {
-//			new Thread(() -> hiloRecogePedidos()).start();
-//		}
+		//Mañana
+		for (int i = 0; i < NUM_ADMIN; i++) {
+			new Thread(() -> hiloAdminM()).start();
+		}
+		
+		for (int i = 0; i < NUM_RECOGE_PEDIDOS; i++) {
+			new Thread(() -> hiloRecogePedidosM()).start();
+		}
+		
+		for (int i = 0; i < NUM_EMPAQUETA_PEDIDOS; i++) {
+			new Thread(() -> hiloEmpaquetaPedidosM()).start();
+		}
+		
+		//Tarde
+		for (int i = 0; i < NUM_ADMIN; i++) {
+			new Thread(() -> hiloAdminT()).start();
+		}
+		
+		for (int i = 0; i < NUM_RECOGE_PEDIDOS; i++) {
+			new Thread(() -> hiloRecogePedidosT()).start();
+		}
+		
+		for (int i = 0; i < NUM_EMPAQUETA_PEDIDOS; i++) {
+			new Thread(() -> hiloEmpaquetaPedidosT()).start();
+		}
+		
+		
 		for (int i = 0; i < NUM_ENCARGADO; i++) {
 			new Thread(() -> hiloEncargado()).start();
 		}
