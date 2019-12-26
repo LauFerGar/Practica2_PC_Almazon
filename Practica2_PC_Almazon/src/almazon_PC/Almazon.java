@@ -123,13 +123,13 @@ public class Almazon {
 
 		while (true) {
 			if (t == turno) {
-				exA.acquire();
+				//exA.acquire();
 				Pedido pAdmin = exPedido.exchange(null);
 				while (pAdmin == null)
 					pAdmin = exPedido.exchange(null);
 //			System.out.println("Admin recoge exPedido pedido: "+pAdmin.num_pedido);
 //			System.out.println("Admin recoge exPedido cliente: "+pAdmin.nombre_Cliente);
-				exA.release();
+				//exA.release();
 
 				for (int producto : pAdmin.lista_productos_cliente) {
 					System.out.println("\t" + "EmpleadoA " + Thread.currentThread().getId() + " El cliente "
