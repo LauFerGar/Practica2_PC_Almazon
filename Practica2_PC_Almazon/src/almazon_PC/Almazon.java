@@ -1,215 +1,323 @@
 package almazon_PC;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Exchanger;
 import java.util.concurrent.Semaphore;
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.ReentrantLock;
 
 public class Almazon {
 
-	//Cerrojo para Cliente y Admin
-	private ReentrantLock lock = new ReentrantLock();
-	
-	private ReentrantLock inc = new ReentrantLock();
-
-	//Condicion de cerrojo de Administrador para despertar al cliente para que pague
-	private Condition adminLock = lock.newCondition();
-	//Condicion de cerrojo de Cliente para avisar que ha mandado el pago
-	private Condition pago_realizado = lock.newCondition();
-
-	//Semaforo que controla el acceso al almacen de productos
-	private Semaphore ver_almacen = new Semaphore(1);
-	//Semaforo que controla la variable booleana que dice si hay que reponer o no
-	private Semaphore reponer_almacen = new Semaphore(1);
-
-	//Exchanger que pasa el pedido del Cliente al Admin
-	private Exchanger<Pedido> exPedido = new Exchanger<Pedido>();
-	//Exchanger que pasa el productoq ue hay que reponer
-	private Exchanger<Integer> producto_reponer = new Exchanger<Integer>();
-
-	//Numero de pedido
+	// Variable del numero de pedidos
 	public volatile int num_pedido = 0;
-	//Almacen
-	public volatile int[] almacen = {10,10,10,10,20,20,20,20,20,20};
-	//Booleano que dice si hay que reponer algo o no
-	public volatile boolean reponer = false; 
-	
-	//Lista de pedidos que ve Admin
+	// Variable del numero de pedidos empaquetados para enviar
+	public volatile int num_pedidos_empaquetados = 0;
+	// Almacen
+	public volatile int[] almacen = { 10, 10, 10, 10, 20, 20, 20, 20, 20, 20 };
+	// Variable booleana para saber si estamos en hoario laboral o no
+	public volatile boolean horario = true;
+	// Variable booleana para saber si estamos en hoario de mañana o tarde;
+	public volatile int turno = 0;
+	// Variable para las horas
+	public volatile int horas = 9;
+
+	// Constante del numero de productos que puede llegar a pedir un cliente como
+	// maximo
+	static final int MAX_PRODUCT_CLIENT = 3;
+	// Constantes del tamaño de las playas
+	static final int MAX_PRODUCT_PLAYA = 20;
+
+	// Mapa de la playa 1
+	private Map<Integer, Integer> playa_1 = new HashMap<>();
+	// Mapa de la playa 2
+	private Map<Integer, Integer> playa_2 = new HashMap<>();
+
+	// Semaforo para acceder al almacen
+	private Semaphore sem_ver_almacen = new Semaphore(1);
+	// Semaforo para lista de RecogePedidos
+	private Semaphore sem_lista_recogePedidos = new Semaphore(1);
+
+	// Semaforo para while
+	private Semaphore exC = new Semaphore(1);
+	// Semaforo para while
+	private Semaphore exA = new Semaphore(1);
+
+	// Semaforos para playas
+	private Semaphore sem_playa_1 = new Semaphore(1);
+	private Semaphore sem_playa_2 = new Semaphore(1);
+
+	// Lista de los pedidos que se han realizado
 	List<Pedido> lista_pedidos = new ArrayList<Pedido>();
+	// Lista de los pedidos que van a procesar los Encargados RecogePedidos
+	List<Pedido> lista_pedidos_recogePedidos = new ArrayList<Pedido>();
+	// Lista de pedidos Especiales que estan mal
+	List<Pedido> lista_pedidos_especial = new ArrayList<Pedido>();
+
+	// Exchanger que pasa el pedido del Cliente al Admin
+	private Exchanger<Pedido> exPedido = new Exchanger<Pedido>();
+
+	// Exchanger que pasa indicar que se ha relizado el pedido
+	private Exchanger<Thread> exRealizado = new Exchanger<Thread>();
+
+	// Exchanger que pasa indicar que se ha relizado el pago
+	private Exchanger<Thread> exPagado = new Exchanger<Thread>();
 
 	public void Cliente() throws InterruptedException {
-			while (true) {
-				int pedido_cliente;
-				List<Integer> lista_productos_cliente = new ArrayList<Integer>();
-				long nombre_cliente = Thread.currentThread().getId();
 
-				Thread.sleep(2000);
-				
-				inc.lock();
-				try {
-					pedido_cliente = num_pedido + 1;
+		while (true) {
+			int nPedido = 0;
+			List<Integer> lista = new ArrayList<Integer>();
+			long nombre = Thread.currentThread().getId();
 
-					int num_productos = (int) (Math.random() * 3 + 1);
+			// Aumentamos el contador del metodo del numero de pedido
+			nPedido = num_pedido + 1;
 
-					for (int i = 0; i < num_productos; i++) {
-						int producto = (int) (Math.random() * almacen.length);
-						lista_productos_cliente.add(producto);
-					}
+			// Aumentamos contador de fuera del metodo
+			num_pedido++;
 
-					System.out.println("El cliente " + nombre_cliente + " realiza pedido");
-					num_pedido++;
-				} finally {
-					inc.unlock();
-				}
-				Pedido p = new Pedido(pedido_cliente, lista_productos_cliente, nombre_cliente, Thread.currentThread());
-				lista_pedidos.add(p);
-				
-				exPedido.exchange(p);
-				
-				Thread.sleep(2000);
-				
-				lock.lock();
-				try {
-					
-					// Mientras no se ha tramitado el pedido el cliente espera
-					while (lock.hasWaiters(adminLock))
-						adminLock.await();
-					System.out.println(
-							"El cliente " + nombre_cliente + " esta esperando para pagar el pedido " + p.num_pedido);
+			// Creamos un numero aleatorio del numero de productos que quiere el cliente
+			int num_productos = (int) (Math.random() * MAX_PRODUCT_CLIENT + 1);
 
-				} catch (InterruptedException e) {
-					System.out.println("Se ha producido un fallo en el pedido y el Cliente tiene que pedir de nuevo");
-				} finally {
-					lock.unlock();
-				}
-				
-				Thread.sleep(2000);
+			// Generemos los productos que quiere el cliente y los aï¿½adimos a la lista del
+			// producto.
+			for (int i = 0; i < num_productos; i++) {
+				int producto = (int) (Math.random() * almacen.length);
+				lista.add(producto);
+			}
 
-				lock.lock();
-				try {
-					while (lock.hasWaiters(pago_realizado))
-						pago_realizado.await();
-					
-				} catch (InterruptedException e) {
-					System.out.println("Se ha producido un fallo en el pedido y el Cliente tiene que pedir de nuevo");
-				} finally {
-					lock.unlock();
-					Thread.sleep(2000);
-					System.out.println("El cliente " + nombre_cliente + " ha pagado el pedido " + p.num_pedido);
-				}
-				
+			sem_ver_almacen.acquire();
+			Pedido p = new Pedido(nPedido, lista, nombre, Thread.currentThread());
+
+			lista_pedidos.add(p);
+			sem_ver_almacen.release();
+
+			System.out.println("Soy Cliente " + Thread.currentThread().getId() + " y he mandado el pedido " + nPedido);
+
+			exC.acquire();
+			exPedido.exchange(p);
+//			System.out.println("cliente recoge exPedido: "+p.num_pedido);
+			exC.release();
+
+			exC.acquire();
+			Thread cliente = exRealizado.exchange(null);
+			while (cliente == null) {
+				cliente = exRealizado.exchange(null);
+			}
+//			System.out.println("cliente recoge exRealizado: "+cliente.getId());
+			exC.release();
+
+//			System.out.println("pedido exPagado: "+p.hiloCliente.getId());
+			exPagado.exchange(p.hiloCliente);
+
+			Thread.sleep(5000);
 		}
 
 	}
 
-	public void EmpleadoAdministrativo() throws InterruptedException {
+	public void EmpleadoAdministrativo(int t) throws InterruptedException {
+		// if lista pedido_urgente y lista pedidos_para enviar estan vacias
+		// si no/ pregunta cual esta llena y la gestiona if/else
+
 		while (true) {
+			if (t == turno) {
+				exA.acquire();
 				Pedido pAdmin = exPedido.exchange(null);
 				while (pAdmin == null)
 					pAdmin = exPedido.exchange(null);
+//			System.out.println("Admin recoge exPedido pedido: "+pAdmin.num_pedido);
+//			System.out.println("Admin recoge exPedido cliente: "+pAdmin.nombre_Cliente);
+				exA.release();
 
-				System.out.println("Admin recibe pedido del cliente: " + pAdmin.nombre_Cliente
-						+ " con numero de pedido: " + pAdmin.num_pedido);
-				
-				Thread.sleep(2000);
-
-				lock.lock();
-				try {
-					for (int producto : pAdmin.lista_productos_cliente) {
-						System.out.println("El cliente " + pAdmin.nombre_Cliente + " pide el producto " + producto);
-					}
-					System.out.println("Revisando Datos...");
-					for (int producto : pAdmin.lista_productos_cliente) {
-						if (almacen[producto] <= 0) {
-							System.out.println("El producto " + producto + " esta agotado");
-							pAdmin.hiloCliente.interrupt();
-							Thread.currentThread().interrupt();
-						} 
-						else if(almacen[producto]<=5) {
-							reponer_almacen.acquire();
-							reponer=true;
-							producto_reponer.exchange(producto);
-							reponer_almacen.release();
-							
-							Thread.sleep(2000);
-							
-							ver_almacen.acquire();
-							almacen[producto]--;
-							ver_almacen.release();
-						}
-						else {
-							ver_almacen.acquire();
-							almacen[producto]--;
-							ver_almacen.release();
-						}
-						System.out.println("Quedan " + almacen[producto] + " articulos del producto " + producto);
-					}
-					Thread.sleep(500);
-					System.out.println("Datos Correctos. Numero Pedido:  " + pAdmin.getNum_pedido()
-							+ " - Nombre Cliente: " + pAdmin.getNombre_Cliente());
-					System.out.println("Lista de Productos: ");
-
-					for (int producto : pAdmin.lista_productos_cliente) {
-						System.out.println("Producto verificado: " + producto);
-					}
-
-					adminLock.signal();// Despertamos al cliente
-				} catch (InterruptedException e) {
-					System.out.println(
-							"Se cancela pedido del Cliente " + pAdmin.getNombre_Cliente() + " por falta de productos");
-				}finally {
-					lock.unlock();
+				for (int producto : pAdmin.lista_productos_cliente) {
+					System.out.println("\t" + "EmpleadoA " + Thread.currentThread().getId() + " El cliente "
+							+ pAdmin.nombre_Cliente + " pide el producto " + producto);
 				}
-				
-				Thread.sleep(2000);
-
-				lock.lock();
-				try {
-					System.out.println("Esperando pago del pedido " + pAdmin.num_pedido);
-					pago_realizado.signal();
-					Thread.sleep(1000);
-					System.out.println("Admin - Pago realizado del cliente: " + pAdmin.nombre_Cliente);
-
-					System.out.println("Admin - Email enviado al cliente: " + pAdmin.nombre_Cliente);
-				} catch (InterruptedException e) {
-				} finally {
-					lock.unlock();
-					
+				System.out.println("\t" + "EmpleadoA " + Thread.currentThread().getId() + " Revisando Datos...");
+				for (int producto : pAdmin.lista_productos_cliente) {
+					sem_ver_almacen.acquire();
+					almacen[producto]--;
+					sem_ver_almacen.release();
+					System.out.println("\t" + "EmpleadoA " + Thread.currentThread().getId() + " Quedan "
+							+ almacen[producto] + " articulos del producto " + producto);
 				}
+
+				System.out.println(
+						"\t" + "EmpleadoA " + Thread.currentThread().getId() + " Datos Correctos. Numero Pedido:  "
+								+ pAdmin.getNum_pedido() + " - Nombre Cliente: " + pAdmin.getNombre_Cliente());
+
+				for (int producto : pAdmin.lista_productos_cliente) {
+					System.out.println("\t" + "EmpleadoA " + Thread.currentThread().getId() + " Cliente "
+							+ pAdmin.nombre_Cliente + "- producto verificado: " + producto);
+				}
+
+				// Si el pedido ha salido bien devolvemos el hilo del cliente. Si no devolvemos
+				// un hilo aleatorio
+
+//			System.out.println("pedido mandado por exRealizado: "+pAdmin.hiloCliente.getId());
+				exRealizado.exchange(pAdmin.hiloCliente);
+
+				exA.acquire();
+				Thread pagoCliente = exPagado.exchange(null);
+				while (pagoCliente == null)
+					pagoCliente = exPagado.exchange(null);
+
+//			System.out.println("exPagado hilo: "+pagoCliente.getId());
+//			System.out.println("cliente pAdmin: "+pAdmin.hiloCliente.getId());
+
+				System.out.println(
+						"\t" + "EmpleadoA " + Thread.currentThread().getId() + " El cliente " + pagoCliente.getId()
+								+ " ha pagado el pedido " + pAdmin.num_pedido + ". Procedemos a mandar Email");
+				exA.release();
+
+				// sem_lista_recogePedidos.acquire();
+				lista_pedidos_recogePedidos.add(pAdmin);
+				// sem_lista_recogePedidos.release();
+
+				Thread.sleep(1500);
+			}
 		}
 
 	}
 
-	public void EmpleadoRecogePedidos() throws InterruptedException {
+	public void EmpleadoRecogePedidos(int t) throws InterruptedException {
 
+		while (true) {
+			if (t == turno) {
+				if (!lista_pedidos_especial.isEmpty()) {
+					// Se realiza lo que tiene que hacer cuando hay pedidos mal hechos
+				} else {
+					sem_lista_recogePedidos.acquire();
+					if (!lista_pedidos_recogePedidos.isEmpty()) {
+						// Sacamos de la lista el pedido que vamos a gestionar
+						Pedido pedidoRP = lista_pedidos_recogePedidos.get(0);
+						lista_pedidos_recogePedidos.remove(0);
+
+						boolean realizado = false;
+
+						while (!realizado) {
+							if (playa_1.size() <= MAX_PRODUCT_PLAYA - pedidoRP.lista_productos_cliente.size()) {
+								for (int producto : pedidoRP.lista_productos_cliente) {
+									// Si hay hueco en la primera playa
+									sem_playa_1.acquire();
+									playa_1.put(pedidoRP.num_pedido, producto);
+									System.out.println("\t" + "\t" + "\t" + "EmpleadoRP "
+											+ Thread.currentThread().getId() + " Se mete el producto " + producto
+											+ " del pedido " + pedidoRP.num_pedido + " en la playa 1");
+									sem_playa_1.release();
+								}
+								realizado = true;
+							} else if (playa_2
+									.size() <= (MAX_PRODUCT_PLAYA - pedidoRP.lista_productos_cliente.size())) {
+								for (int producto : pedidoRP.lista_productos_cliente) {
+									sem_playa_2.acquire();
+									playa_2.put(pedidoRP.num_pedido, producto);
+									System.out.println("\t" + "\t" + "\t" + "EmpleadoRP "
+											+ Thread.currentThread().getId() + " Se mete el producto " + producto
+											+ " del pedido " + pedidoRP.num_pedido + " en la playa 2");
+									sem_playa_2.release();
+								}
+								realizado = true;
+							}
+						}
+					}
+
+					else {
+						System.out.println("\t" + "\t" + "\t" + "Esperando productos en playa");
+					}
+					sem_lista_recogePedidos.release();
+				}
+				Thread.sleep(1500);
+			}
+		}
 	}
 
-	public void EmpleadoEmpaquetaPedidos() throws InterruptedException {
+	public void EmpleadoEmpaquetaPedidos(int t) throws InterruptedException {
 
+		while (true) {
+			if (t == turno) {
+				Thread.sleep(1500);
+				if (!playa_1.isEmpty()) {
+					sem_ver_almacen.acquire();
+					Pedido pedidoEP = lista_pedidos.get(0);
+					sem_ver_almacen.release();
+
+					sem_playa_1.acquire();
+					for (int pedido : pedidoEP.lista_productos_cliente) {
+						playa_1.remove(pedidoEP.num_pedido, pedido);
+					}
+					sem_playa_1.release();
+
+					System.out.println("\t" + "\t" + "\t" + "\t" + "\t" + "EmpleadoEP " + Thread.currentThread().getId()
+							+ " Empaquetado el pedido " + pedidoEP.num_pedido + " del cliente "
+							+ pedidoEP.nombre_Cliente);
+
+					sem_ver_almacen.acquire();
+					lista_pedidos.remove(pedidoEP);
+					sem_ver_almacen.release();
+
+					System.out.println("\t" + "\t" + "\t" + "\t" + "\t" + "EmpleadoEP " + Thread.currentThread().getId()
+							+ " Se ha procedido a mandar el pedido " + pedidoEP.num_pedido + " al cliente "
+							+ pedidoEP.num_pedido);
+
+				} else if (!playa_2.isEmpty()) {
+					sem_ver_almacen.acquire();
+					Pedido pedidoEP = lista_pedidos.get(0);
+					sem_ver_almacen.release();
+
+					sem_playa_2.acquire();
+					for (int pedido : pedidoEP.lista_productos_cliente) {
+						playa_2.remove(pedidoEP.num_pedido, pedido);
+					}
+					sem_playa_2.release();
+
+					System.out.println("\t" + "\t" + "\t" + "\t" + "\t" + "EmpleadoEP " + Thread.currentThread().getId()
+							+ " Empaquetado el pedido " + pedidoEP.num_pedido + " del cliente "
+							+ pedidoEP.nombre_Cliente);
+
+					sem_ver_almacen.acquire();
+					lista_pedidos.remove(pedidoEP);
+					sem_ver_almacen.release();
+				}
+				Thread.sleep(1500);
+			}
+		}
 	}
 
-	public void EmpleadoRecogeLimpieza() throws InterruptedException {
+	public void EmpleadoLimpieza(int turno) throws InterruptedException {
 
 	}
 
 	public void EmpleadoEncargado() throws InterruptedException {
 
-		while(true) {
-		
-			while(!reponer) {
-				Thread.sleep(5000);
-				System.out.println("Encargado - Estoy haciendo cosas");
+		while (true) {
+			if (horario) {
+				if (horas >= 9 && horas < 14) {
+					turno = 0;
+					horas++;
+					System.out.println("\t" + "\t" + "\t" + "\t" + "\t" + "Encargado " + Thread.currentThread().getId() + " Son las: " + horas + ". Turno mañana");
+					Thread.sleep(2000);
+				} else if (horas >= 14 && horas <= 20) {
+					turno = 1;
+					horas++;
+					System.out.println("\t" + "\t" + "\t" + "\t" + "\t" + "Encargado " + Thread.currentThread().getId() + " Son las: " + horas + ". Turno tarde");
+					Thread.sleep(2000);
+				} else {
+					turno=-1;
+					horario = false;
+					System.out.println("\t" + "\t" + "\t" + "\t" + "\t" + "Encargado " + Thread.currentThread().getId() + " Son las: " + horas);
+				}
+			} else {
+				if (horas >= 24) {
+					horas = 0;
+				}
+				else if (horas == 8) {
+					horario=true;
+				}
+				horas++;
+				System.out.println("\t" + "\t" + "\t" + "\t" + "\t" + "Encargado " + Thread.currentThread().getId() + " Son las: " + horas);
+				Thread.sleep(2000);
 			}
-			
-			int producto = producto_reponer.exchange(null);
-			ver_almacen.acquire();
-			almacen[producto]=20;
-			System.out.println("El producto "+ producto + " se ha repuesto y ahora hay " + almacen[producto] + " articulos");
-			ver_almacen.release();
-			
 		}
-		
 	}
 }
