@@ -3,7 +3,7 @@ package almazon_PC;
 public class Personal {
 	Almazon almazon; 
 	
-	static final int NUM_CLIENTES = 4; 
+	static final int NUM_CLIENTES = 6; 
 	static final int NUM_ADMIN = 2; 
 	static final int NUM_ENCARGADO = 1;
 	static final int NUM_RECOGE_PEDIDOS = 2;

@@ -223,10 +223,6 @@ public class Almazon {
 							}
 						}
 					}
-
-					else {
-						System.out.println("\t" + "\t" + "\t" + "Esperando productos en playa");
-					}
 					sem_lista_recogePedidos.release();
 				}
 				Thread.sleep(1500);
@@ -293,7 +289,6 @@ public class Almazon {
 	public void EmpleadoLimpieza(int t) throws InterruptedException {
 		while (true) {
 			if (t == turno) {
-				Thread.sleep(2000);
 				if (num_pedidos_empaquetados % 10 == 0 && num_pedidos_empaquetados != 0) {
 					sem_playa_1.acquire();
 					sem_playa_2.acquire();
@@ -315,8 +310,9 @@ public class Almazon {
 				} else {
 					System.out.println("\t" + "\t" + "\t" + "\t" + "\t" + "\t" + "EmpleadoL "
 							+ Thread.currentThread().getId() + " Esperando a limpiar");
-					Thread.sleep(2000);
+					
 				}
+				Thread.sleep(2000);
 			}
 		}
 	}
