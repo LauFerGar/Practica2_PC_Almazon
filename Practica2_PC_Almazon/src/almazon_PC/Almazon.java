@@ -110,8 +110,8 @@ public class Almazon {
 //			System.out.println("pedido exPagado: "+p.hiloCliente.getId());
 			exPagado.exchange(p.hiloCliente);
 
-			int descanso = (int) (Math.random() * (12-8+1)+8);
-			
+			int descanso = (int) (Math.random() * (12 - 8 + 1) + 8);
+
 			Thread.sleep(descanso * 1000);
 		}
 
@@ -262,6 +262,8 @@ public class Almazon {
 							+ " Se ha procedido a mandar el pedido " + pedidoEP.num_pedido + " al cliente "
 							+ pedidoEP.num_pedido);
 
+					num_pedidos_empaquetados++;
+
 				} else if (!playa_2.isEmpty()) {
 					sem_ver_almacen.acquire();
 					Pedido pedidoEP = lista_pedidos.get(0);
@@ -280,14 +282,43 @@ public class Almazon {
 					sem_ver_almacen.acquire();
 					lista_pedidos.remove(pedidoEP);
 					sem_ver_almacen.release();
+
+					num_pedidos_empaquetados++;
 				}
 				Thread.sleep(1500);
 			}
 		}
 	}
 
-	public void EmpleadoLimpieza(int turno) throws InterruptedException {
+	public void EmpleadoLimpieza(int t) throws InterruptedException {
+		while (true) {
+			if (t == turno) {
+				Thread.sleep(2000);
+				if (num_pedidos_empaquetados % 10 == 0 && num_pedidos_empaquetados != 0) {
+					sem_playa_1.acquire();
+					sem_playa_2.acquire();
 
+					System.out.println("\t" + "\t" + "\t" + "\t" + "\t" + "\t" + "EmpleadoL "
+							+ Thread.currentThread().getId() + " Procedo a limpiar la playa 1");
+
+					playa_2.putAll(playa_1);
+					playa_1.clear();
+
+					System.out.println("\t" + "\t" + "\t" + "\t" + "\t" + "\t" + "EmpleadoL "
+							+ Thread.currentThread().getId() + " Playa Limpia. Se ponen los pedidos de nuevo");
+
+					playa_1.putAll(playa_2);
+					playa_2.clear();
+
+					sem_playa_1.release();
+					sem_playa_2.release();
+				} else {
+					System.out.println("\t" + "\t" + "\t" + "\t" + "\t" + "\t" + "EmpleadoL "
+							+ Thread.currentThread().getId() + " Esperando a limpiar");
+					Thread.sleep(2000);
+				}
+			}
+		}
 	}
 
 	public void EmpleadoEncargado() throws InterruptedException {
@@ -297,28 +328,31 @@ public class Almazon {
 				if (horas >= 9 && horas < 14) {
 					turno = 0;
 					horas++;
-					System.out.println("\t" + "\t" + "\t" + "\t" + "\t" + "Encargado " + Thread.currentThread().getId() + " Son las: " + horas + ". Turno mañana");
+					System.out.println("\t" + "\t" + "\t" + "\t" + "\t" + "Encargado " + Thread.currentThread().getId()
+							+ " Son las: " + horas + ". Turno mañana");
 					Thread.sleep(2000);
 				} else if (horas >= 14 && horas <= 20) {
 					turno = 1;
 					horas++;
-					System.out.println("\t" + "\t" + "\t" + "\t" + "\t" + "Encargado " + Thread.currentThread().getId() + " Son las: " + horas + ". Turno tarde");
+					System.out.println("\t" + "\t" + "\t" + "\t" + "\t" + "Encargado " + Thread.currentThread().getId()
+							+ " Son las: " + horas + ". Turno tarde");
 					Thread.sleep(2000);
 				} else {
-					turno=-1;
+					turno = -1;
 					horario = false;
-					System.out.println("\t" + "\t" + "\t" + "\t" + "\t" + "Encargado " + Thread.currentThread().getId() + " Son las: " + horas);
+					System.out.println("\t" + "\t" + "\t" + "\t" + "\t" + "Encargado " + Thread.currentThread().getId()
+							+ " Son las: " + horas);
 				}
 			} else {
 				if (horas >= 24) {
 					horas = 0;
-				}
-				else if (horas == 8) {
-					horario=true;
+				} else if (horas == 8) {
+					horario = true;
 				}
 				horas++;
-				System.out.println("\t" + "\t" + "\t" + "\t" + "\t" + "Encargado " + Thread.currentThread().getId() + " Son las: " + horas);
-				Thread.sleep(500);
+				System.out.println("\t" + "\t" + "\t" + "\t" + "\t" + "Encargado " + Thread.currentThread().getId()
+						+ " Son las: " + horas);
+				Thread.sleep(250);
 			}
 		}
 	}
