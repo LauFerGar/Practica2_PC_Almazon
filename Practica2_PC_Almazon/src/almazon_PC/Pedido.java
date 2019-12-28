@@ -28,6 +28,26 @@ public class Pedido {
 	public long getNombre_Cliente() {
 		return nombre_Cliente;
 	}
+
+
+	public void setNum_pedido(int num_pedido) {
+		this.num_pedido = num_pedido;
+	}
+
+
+	public void setLista_productos_cliente(List<Integer> lista_productos_cliente) {
+		this.lista_productos_cliente = lista_productos_cliente;
+	}
+
+
+	public void setNombre_Cliente(long nombre_Cliente) {
+		this.nombre_Cliente = nombre_Cliente;
+	}
+
+
+	public void setHiloCliente(Thread hiloCliente) {
+		this.hiloCliente = hiloCliente;
+	}
 	
 	
 	
