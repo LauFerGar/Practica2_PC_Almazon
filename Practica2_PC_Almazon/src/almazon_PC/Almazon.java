@@ -210,36 +210,47 @@ public class Almazon {
 
 				Thread.sleep(descanso * 1000);
 				if (!lista_pedidos_especial.isEmpty()) {
-					/*
-					 * sem_especial.acquire(); Pedido especial = lista_pedidos_especial.get(0);
-					 * lista_pedidos_especial.remove(especial); System.out.println("\t" + "\t" +
-					 * "\t" + "EmpleadoRP " + Thread.currentThread().getId() +
-					 * " Estoy tratando un pedido ESPECIAL");
-					 * 
-					 * int error = especial.lista_productos_cliente.get(0); error--;
-					 * especial.lista_productos_cliente.set(0, error);
-					 * 
-					 * boolean realizado = false;
-					 * 
-					 * while (!realizado) { if (playa_1.size() <= MAX_PRODUCT_PLAYA -
-					 * especial.lista_productos_cliente.size()) { for (int producto :
-					 * especial.lista_productos_cliente) { // Si hay hueco en la primera playa
-					 * sem_playa_1.acquire(); playa_1.put(especial.num_pedido, producto);
-					 * System.out.println("\t" + "\t" + "\t" + "EmpleadoRP " +
-					 * Thread.currentThread().getId() + " Se mete el producto " + producto +
-					 * " del pedido " + especial.num_pedido + " en la playa 1");
-					 * sem_playa_1.release(); } realizado = true; } else if (playa_2.size() <=
-					 * (MAX_PRODUCT_PLAYA - especial.lista_productos_cliente.size())) { for (int
-					 * producto : especial.lista_productos_cliente) { sem_playa_2.acquire();
-					 * playa_2.put(especial.num_pedido, producto); System.out.println("\t" + "\t" +
-					 * "\t" + "EmpleadoRP " + Thread.currentThread().getId() +
-					 * " Se mete el producto " + producto + " del pedido " + especial.num_pedido +
-					 * " en la playa 2"); sem_playa_2.release(); } realizado = true; } }
-					 * 
-					 * System.out.println("\t" + "\t" + "\t" + "EmpleadoRP " +
-					 * Thread.currentThread().getId() +
-					 * " Pedido ESPECIAL corregido y metido en la playa"); sem_especial.release();
-					 */
+
+					sem_especial.acquire();
+					Pedido especial = lista_pedidos_especial.get(0);
+					lista_pedidos_especial.remove(especial);
+					System.out.println("\t" + "\t" + "\t" + "EmpleadoRP " + Thread.currentThread().getId()
+							+ " Estoy tratando un pedido ESPECIAL");
+
+					int error = especial.lista_productos_cliente.get(0);
+					error--;
+					especial.lista_productos_cliente.set(0, error);
+
+					boolean realizado = false;
+
+					while (!realizado) {
+						if (playa_1.size() <= MAX_PRODUCT_PLAYA - especial.lista_productos_cliente.size()) {
+							for (int producto : especial.lista_productos_cliente) { // Si hay hueco en la primera playa
+								sem_playa_1.acquire();
+								playa_1.put(especial.num_pedido, producto);
+								System.out.println("\t" + "\t" + "\t" + "EmpleadoRP " + Thread.currentThread().getId()
+										+ " Se mete el producto " + producto + " del pedido " + especial.num_pedido
+										+ " en la playa 1");
+								sem_playa_1.release();
+							}
+							realizado = true;
+						} else if (playa_2.size() <= (MAX_PRODUCT_PLAYA - especial.lista_productos_cliente.size())) {
+							for (int producto : especial.lista_productos_cliente) {
+								sem_playa_2.acquire();
+								playa_2.put(especial.num_pedido, producto);
+								System.out.println("\t" + "\t" + "\t" + "EmpleadoRP " + Thread.currentThread().getId()
+										+ " Se mete el producto " + producto + " del pedido " + especial.num_pedido
+										+ " en la playa 2");
+								sem_playa_2.release();
+							}
+							realizado = true;
+						}
+					}
+
+					System.out.println("\t" + "\t" + "\t" + "EmpleadoRP " + Thread.currentThread().getId()
+							+ " Pedido ESPECIAL corregido y metido en la playa");
+					sem_especial.release();
+
 				} else {
 					sem_lista_recogePedidos.acquire();
 					if (!lista_pedidos_recogePedidos.isEmpty()) {
@@ -309,12 +320,54 @@ public class Almazon {
 							playa_1.remove(pedidoEP.num_pedido, producto);
 						}
 
-						// if (playa_1.containsKey(pedidoEP.num_pedido)) {
-						// productos_OK=false;
-						// }
+						if (playa_1.containsKey(pedidoEP.num_pedido)) {
+							productos_OK = false;
+						}
 						sem_playa_1.release();
 
-						// if (productos_OK) {
+						if (productos_OK) {
+							System.out.println("\t" + "\t" + "\t" + "\t" + "\t" + "EmpleadoEP "
+									+ Thread.currentThread().getId() + " Empaquetado el pedido " + pedidoEP.num_pedido
+									+ " del cliente " + pedidoEP.nombre_Cliente);
+
+							sem_ver_almacen.acquire();
+							lista_pedidos.remove(pedidoEP);
+							sem_ver_almacen.release();
+
+							System.out.println("\t" + "\t" + "\t" + "\t" + "\t" + "EmpleadoEP "
+									+ Thread.currentThread().getId() + " Se ha procedido a mandar el pedido "
+									+ pedidoEP.num_pedido + " al cliente " + pedidoEP.num_pedido);
+
+							num_pedidos_empaquetados++;
+						}
+
+						else {
+							sem_especial.acquire();
+							System.out.println("\t" + "\t" + "\t" + "\t" + "\t" + "EmpleadoEP "
+									+ Thread.currentThread().getId()
+									+ " No se empaqueta el pedido. Esta MAL GESTIONADO. Ponemos el pedido en ESPECIAL");
+							lista_pedidos_especial.add(pedidoEP);
+							productos_OK = true;
+							sem_especial.release();
+						}
+
+					}
+				} else if (!playa_2.isEmpty()) {
+					sem_ver_almacen.acquire();
+					Pedido pedidoEP = lista_pedidos.get(0);
+					sem_ver_almacen.release();
+					sem_playa_2.acquire();
+					for (int producto : pedidoEP.lista_productos_cliente) {
+						playa_2.remove(pedidoEP.num_pedido, producto);
+					}
+
+					if (playa_2.containsKey(pedidoEP.num_pedido)) {
+						productos_OK = false;
+					}
+
+					sem_playa_2.release();
+
+					if (productos_OK) {
 						System.out.println("\t" + "\t" + "\t" + "\t" + "\t" + "EmpleadoEP "
 								+ Thread.currentThread().getId() + " Empaquetado el pedido " + pedidoEP.num_pedido
 								+ " del cliente " + pedidoEP.nombre_Cliente);
@@ -323,49 +376,18 @@ public class Almazon {
 						lista_pedidos.remove(pedidoEP);
 						sem_ver_almacen.release();
 
-						System.out.println("\t" + "\t" + "\t" + "\t" + "\t" + "EmpleadoEP "
-								+ Thread.currentThread().getId() + " Se ha procedido a mandar el pedido "
-								+ pedidoEP.num_pedido + " al cliente " + pedidoEP.num_pedido);
-
 						num_pedidos_empaquetados++;
-						// }
 
-						/*
-						 * else { sem_especial.acquire(); System.out.println("\t" + "\t" + "\t" + "\t" +
-						 * "\t" + "EmpleadoEP " + Thread.currentThread().getId() +
-						 * " No se empaqueta el pedido. Esta MAL GESTIONADO. Ponemos el pedido en ESPECIAL"
-						 * ); lista_pedidos_especial.add(pedidoEP); productos_OK = true;
-						 * sem_especial.release(); }
-						 */
+					} else {
+						sem_especial.acquire();
+						System.out.println("\t" + "\t" + "\t" + "\t" + "\t" + "EmpleadoEP "
+								+ Thread.currentThread().getId()
+								+ " No se empaqueta el pedido. Esta MAL GESTIONADO. Ponemos el pedido en ESPECIAL");
+						lista_pedidos_especial.add(pedidoEP);
+						productos_OK = true;
+						sem_especial.release();
 					}
-				} else if (!playa_2.isEmpty()) {
-					sem_ver_almacen.acquire();
-					Pedido pedidoEP = lista_pedidos.get(0);
 
-					sem_playa_2.acquire();
-					for (int producto : pedidoEP.lista_productos_cliente) {
-						playa_2.remove(pedidoEP.num_pedido, producto);
-					}
-					sem_ver_almacen.release();
-					sem_playa_2.release();
-
-					// if (productos_OK) {
-					System.out.println("\t" + "\t" + "\t" + "\t" + "\t" + "EmpleadoEP " + Thread.currentThread().getId()
-							+ " Empaquetado el pedido " + pedidoEP.num_pedido + " del cliente "
-							+ pedidoEP.nombre_Cliente);
-
-					sem_ver_almacen.acquire();
-					lista_pedidos.remove(pedidoEP);
-					sem_ver_almacen.release();
-
-					num_pedidos_empaquetados++;
-					/*
-					 * } else { sem_especial.acquire(); System.out.println("\t" + "\t" + "\t" + "\t"
-					 * + "\t" + "EmpleadoEP " + Thread.currentThread().getId() +
-					 * " No se empaqueta el pedido. Esta MAL GESTIONADO. Ponemos el pedido en ESPECIAL"
-					 * ); lista_pedidos_especial.add(pedidoEP); productos_OK = true;
-					 * sem_especial.release(); }
-					 */
 				}
 				int aviso = (int) (Math.random() * 100 + 1);
 				limpieza_playa.acquire();
