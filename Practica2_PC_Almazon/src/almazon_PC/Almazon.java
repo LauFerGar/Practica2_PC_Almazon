@@ -87,7 +87,6 @@ public class Almazon {
 			sem_contador.acquire();
 			// Aumentamos contador de fuera del metodo
 			num_pedido++;
-			
 			// Aumentamos el contador del metodo del numero de pedido
 			nPedido = num_pedido;
 			sem_contador.release();
@@ -223,10 +222,6 @@ public class Almazon {
 					System.out.println("\t" + "\t" + "\t" + "EmpleadoRP " + Thread.currentThread().getId()
 							+ " Estoy tratando un pedido ESPECIAL");
 
-					int error = especial.lista_productos_cliente.get(0);
-					error--;
-					especial.lista_productos_cliente.set(0, error);
-
 					boolean realizado = false;
 
 					while (!realizado) {
@@ -268,7 +263,7 @@ public class Almazon {
 
 						int confusion = (int) (Math.random() * 100 + 1);
 
-						if (confusion <= 5) {
+						if (confusion <= 50) {
 							int error;
 							error = pedidoRP.lista_productos_cliente.get(0);
 							error++;

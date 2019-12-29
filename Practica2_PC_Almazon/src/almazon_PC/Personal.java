@@ -106,6 +106,12 @@ public class Personal {
 		for (int i = 0; i < NUM_CLIENTES; i++) {
 			new Thread(() -> hiloCliente()).start();
 		}
+		
+		//Encargado
+		for (int i = 0; i < NUM_ENCARGADO; i++) {
+			new Thread(() -> hiloEncargado()).start();
+		}
+		
 		//Mañana
 		for (int i = 0; i < NUM_ADMIN; i++) {
 			new Thread(() -> hiloAdminM()).start();
@@ -139,10 +145,7 @@ public class Personal {
 			new Thread(() -> hiloLimpiarT()).start();
 		}
 		
-		//Encargado
-		for (int i = 0; i < NUM_ENCARGADO; i++) {
-			new Thread(() -> hiloEncargado()).start();
-		}
+		
 		
 	}
 	
