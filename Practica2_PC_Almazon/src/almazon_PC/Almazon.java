@@ -336,7 +336,7 @@ public class Almazon {
 
 							System.out.println("\t" + "\t" + "\t" + "\t" + "\t" + "EmpleadoEP "
 									+ Thread.currentThread().getId() + " Se ha procedido a mandar el pedido "
-									+ pedidoEP.num_pedido + " al cliente " + pedidoEP.num_pedido);
+									+ pedidoEP.num_pedido + " al cliente " + pedidoEP.nombre_Cliente);
 
 							num_pedidos_empaquetados++;
 						}
@@ -376,6 +376,11 @@ public class Almazon {
 						lista_pedidos.remove(pedidoEP);
 						sem_ver_almacen.release();
 
+						System.out.println("\t" + "\t" + "\t" + "\t" + "\t" + "EmpleadoEP "
+								+ Thread.currentThread().getId() + " Se ha procedido a mandar el pedido "
+								+ pedidoEP.num_pedido + " al cliente " + pedidoEP.nombre_Cliente);
+
+						
 						num_pedidos_empaquetados++;
 
 					} else {
@@ -407,7 +412,7 @@ public class Almazon {
 		while (true) {
 			if (t == turno) {
 				if (!limpieza) {
-					if (num_pedidos_empaquetados % 20 == 0 && num_pedidos_empaquetados != 0) {
+					if (num_pedidos_empaquetados % 10 == 0 && num_pedidos_empaquetados != 0) {
 						sem_playa_1.acquire();
 						sem_playa_2.acquire();
 
