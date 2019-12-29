@@ -56,6 +56,9 @@ public class Almazon {
 	private Semaphore sem_playa_1 = new Semaphore(1);
 	private Semaphore sem_playa_2 = new Semaphore(1);
 
+	//Semaforo para el contador de pedidos
+	private Semaphore sem_contador = new Semaphore(1);
+	
 	// Lista de los pedidos que se han realizado
 	List<Pedido> lista_pedidos = new ArrayList<Pedido>();
 	// Lista de los pedidos que van a procesar los Encargados RecogePedidos
@@ -81,11 +84,14 @@ public class Almazon {
 			List<Integer> lista = new ArrayList<Integer>();
 			long nombre = Thread.currentThread().getId();
 
-			// Aumentamos el contador del metodo del numero de pedido
-			nPedido = num_pedido + 1;
-
+			sem_contador.acquire();
 			// Aumentamos contador de fuera del metodo
 			num_pedido++;
+			
+			// Aumentamos el contador del metodo del numero de pedido
+			nPedido = num_pedido;
+			sem_contador.release();
+			
 
 			// Creamos un numero aleatorio del numero de productos que quiere el cliente
 			int num_productos = (int) (Math.random() * MAX_PRODUCT_CLIENT + 1);
