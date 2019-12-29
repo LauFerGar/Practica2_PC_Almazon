@@ -20,7 +20,7 @@ public class Almazon {
 	// Variable booleana para saber si estamos en hoario de mañana o tarde;
 	public volatile int turno = 0;
 	// Variable para las horas
-	public volatile int horas = 9;
+	public volatile int horas = 8;
 	// Booleano para saber si hay que limpiar
 	public volatile boolean limpieza = false;
 	// Booleano para confusion de recogepedido que ha cogido mal el producto y
@@ -43,9 +43,9 @@ public class Almazon {
 	// Semaforo para lista de RecogePedidos
 	private Semaphore sem_lista_recogePedidos = new Semaphore(1);
 
-	// Semaforo para while
+	// Semaforo para while del Cliente
 	private Semaphore exC = new Semaphore(1);
-	// Semaforo para while
+	// Semaforo para while del Adminitrativo
 	private Semaphore exA = new Semaphore(1);
 	// Semaforo para aviso de limpieza
 	private Semaphore limpieza_playa = new Semaphore(1);
@@ -263,7 +263,7 @@ public class Almazon {
 
 						int confusion = (int) (Math.random() * 100 + 1);
 
-						if (confusion <= 50) {
+						if (confusion <= 5) {
 							int error;
 							error = pedidoRP.lista_productos_cliente.get(0);
 							error++;

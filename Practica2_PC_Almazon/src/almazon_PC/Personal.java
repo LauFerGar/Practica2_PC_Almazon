@@ -19,6 +19,16 @@ public class Personal {
 			
 		}
 	}
+	
+	private void hiloEncargado() {
+		try {
+			almazon.EmpleadoEncargado();
+			
+		} catch (InterruptedException e) {
+			
+		}
+	}
+	
 	private void hiloAdminM() {
 		try {
 			almazon.EmpleadoAdministrativo(0);
@@ -91,14 +101,7 @@ public class Personal {
 		}
 	}
 	
-	private void hiloEncargado() {
-		try {
-			almazon.EmpleadoEncargado();
-			
-		} catch (InterruptedException e) {
-			
-		}
-	}
+	
 	
 	public void exec() {
 		almazon = new Almazon(); 
